@@ -16,7 +16,9 @@ def test_crear_incidencia_valida():
 
     assert response.status_code == 200
     assert response.json() == {
-        "mensaje_recibido": "He encontrado un perro herido junto a una carretera."
+    "mensaje_recibido": "He encontrado un perro herido junto a una carretera.",
+    "decision_filtro": "requiere_llm",
+    "categoria": None,
     }
 
 

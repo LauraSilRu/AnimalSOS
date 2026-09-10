@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-
+from backend.filter import analizar_filtro
 from backend.schemas import IncidenciaEntrada
 
 
@@ -20,6 +20,10 @@ def root():
 
 @app.post("/incidencias")
 def crear_incidencia(incidencia: IncidenciaEntrada):
+    decision, categoria = analizar_filtro(incidencia.mensaje)
+
     return {
         "mensaje_recibido": incidencia.mensaje,
+        "decision_filtro": decision,
+        "categoria": categoria,
     }
