@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from backend.filter import analizar_filtro
 from backend.schemas import IncidenciaEntrada
-from backend.mock_llm_service import MockLLMService
+from backend.llm_service import OllamaService
 
 
 app = FastAPI(
@@ -10,7 +10,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
-llm_service = MockLLMService()
+llm_service = OllamaService()
 
 @app.get("/")
 def root():

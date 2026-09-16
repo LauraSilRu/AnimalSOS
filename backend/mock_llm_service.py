@@ -14,5 +14,5 @@ class MockLLMService:
             departamento=Departamento.RESCATE,
             resumen="Animal herido requiere atención y posible rescate inmediato",
             accion_recomendada="Contactar al equipo de rescate",
-            razonamiento="La incidencia describe un animal que podría necesitar asistencia.",
+            justificacion="La incidencia describe un animal que podría necesitar asistencia.",
         )

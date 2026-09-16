@@ -1,6 +1,17 @@
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+class Categoria(str, Enum):
+    ANIMAL_HERIDO = "animal_herido"
+    ANIMAL_PERDIDO = "animal_perdido"
+    ANIMAL_ABANDONADO = "animal_abandonado"
+    POSIBLE_MALTRATO = "posible_maltrato"
+    RESCATE = "rescate"
+    ADOPCION = "adopcion"
+    ACOGIDA = "acogida"
+    OTRO = "otro"
 
 
 class Urgencia(str, Enum):
@@ -10,27 +21,12 @@ class Urgencia(str, Enum):
     CRITICA = "critica"
 
 
-class Categoria(str, Enum):
-    ANIMAL_HERIDO = "animal_herido"
-    ANIMAL_EN_PELIGRO = "animal_en_peligro"
-    ANIMAL_PERDIDO = "animal_perdido"
-    ANIMAL_ENCONTRADO = "animal_encontrado"
-    ABANDONO_O_MALTRATO = "abandono_o_maltrato"
-    ADOPCION = "adopcion"
-    ACOGIDA = "acogida"
-    VOLUNTARIADO = "voluntariado"
-    DONACION = "donacion"
-    INFORMACION = "informacion"
-
-
 class Departamento(str, Enum):
     RESCATE = "rescate"
-    REENCUENTROS = "reencuentros"
+    ACOGIDA = "acogida"
     ADOPCIONES = "adopciones"
-    ACOGIDAS = "acogidas"
     VOLUNTARIADO = "voluntariado"
-    DONACIONES = "donaciones"
-    ATENCION_GENERAL = "atencion_general"
+    ADMINISTRACION = "administracion"
 
 
 class IncidenciaEntrada(BaseModel):
@@ -47,4 +43,16 @@ class ResultadoTriaje(BaseModel):
     departamento: Departamento
     resumen: str
     accion_recomendada: str
-    razonamiento: str
+    justificacion: str
+
+    @field_validator("resumen")
+    @classmethod
+    def validar_resumen(cls, value: str) -> str:
+        word_count = len(value.split())
+
+        if not 8 <= word_count <= 12:
+            raise ValueError(
+                "El resumen debe contener entre 8 y 12 palabras."
+            )
+
+        return value

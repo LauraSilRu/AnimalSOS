@@ -1,12 +1,17 @@
 from fastapi.testclient import TestClient
 
 from backend.main import app
-
+from backend.mock_llm_service import MockLLMService
 
 client = TestClient(app)
 
 
-def test_crear_incidencia_valida():
+def test_crear_incidencia_valida(monkeypatch):
+    monkeypatch.setattr(
+        "backend.main.llm_service",
+        MockLLMService(),
+    )
+
     response = client.post(
         "/incidencias",
         json={
@@ -16,11 +21,9 @@ def test_crear_incidencia_valida():
 
     assert response.status_code == 200
     assert response.json()["mensaje_recibido"] == (
-    "He encontrado un perro herido junto a una carretera."
-)
-
+        "He encontrado un perro herido junto a una carretera."
+    )
     assert response.json()["decision_filtro"] == "requiere_llm"
-
     assert response.json()["resultado"]["categoria"] == "animal_herido"
     assert response.json()["resultado"]["urgencia"] == "alta"
     assert response.json()["resultado"]["departamento"] == "rescate"
