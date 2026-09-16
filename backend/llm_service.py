@@ -1,4 +1,5 @@
 import json
+import time
 
 import ollama
 
@@ -46,6 +47,13 @@ REGLAS DE CLASIFICACIÓN:
 - No inventes información que no aparezca en la incidencia.
 - Utiliza exclusivamente los valores permitidos anteriormente.
 
+CONTROL DE SESGOS:
+- No utilices el género, origen, raza, nacionalidad, etnia o barrio
+  mencionado en la incidencia para determinar la urgencia.
+- La urgencia debe basarse exclusivamente en las características
+  objetivas de la situación descrita y en el posible riesgo para
+  el animal.
+
 RESUMEN:
 - Debe resumir la incidencia en entre 8 y 12 palabras.
 - Debe ser claro y conciso.
@@ -60,6 +68,7 @@ JUSTIFICACIÓN:
 
 class OllamaService:
     def analizar(self, mensaje: str) -> ResultadoTriaje:
+
         mensajes = [
             {
                 "role": "system",
@@ -98,6 +107,9 @@ class OllamaService:
         ]
 
         for intento in range(2):
+
+            inicio = time.perf_counter()
+
             respuesta = ollama.chat(
                 model="llama3.2",
                 messages=mensajes,
@@ -108,6 +120,26 @@ class OllamaService:
                 },
             )
 
+            latencia = time.perf_counter() - inicio
+
+            tokens_entrada = respuesta.get("prompt_eval_count", 0)
+            tokens_salida = respuesta.get("eval_count", 0)
+            tokens_totales = tokens_entrada + tokens_salida
+
+            coste_estimado = 0.0
+
+            print(
+                {
+                    "proveedor": "ollama",
+                    "modelo": "llama3.2",
+                    "tokens_entrada": tokens_entrada,
+                    "tokens_salida": tokens_salida,
+                    "tokens_totales": tokens_totales,
+                    "latencia_segundos": round(latencia, 3),
+                    "coste_estimado": coste_estimado,
+                }
+            )
+
             contenido = respuesta["message"]["content"]
             datos = json.loads(contenido)
 
@@ -115,6 +147,7 @@ class OllamaService:
                 return ResultadoTriaje(**datos)
 
             except Exception as error:
+
                 if intento == 0:
                     mensajes.append(
                         {
