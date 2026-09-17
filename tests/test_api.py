@@ -46,3 +46,26 @@ def test_rechazar_sin_mensaje():
     )
 
     assert response.status_code == 422
+
+def test_api_controla_error_de_ollama(monkeypatch):
+    def fake_analizar(mensaje):
+        raise Exception("Ollama no está disponible")
+
+    monkeypatch.setattr(
+        "backend.main.llm_service.analizar",
+        fake_analizar,
+    )
+
+    response = client.post(
+        "/incidencias",
+        json={
+            "mensaje": "He encontrado un perro herido",
+            "proveedor": "ollama",
+        },
+    )
+
+    assert response.status_code == 503
+
+    data = response.json()
+
+    assert data["detail"]["error"] == "El proveedor Ollama no está disponible."

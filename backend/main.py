@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import ValidationError
 
 from backend.filter import analizar_filtro
 from backend.groq_service import GroqService
@@ -43,9 +44,26 @@ def crear_incidencia(incidencia: IncidenciaEntrada):
     # -------- OLLAMA --------
     if incidencia.proveedor == Proveedor.OLLAMA:
 
-        resultado, metricas = llm_service.analizar(
-            incidencia.mensaje
-        )
+        try:
+            resultado, metricas = llm_service.analizar(
+                incidencia.mensaje
+            )
+        except ValidationError as error:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "La respuesta de Ollama no cumple el esquema esperado.",
+                    "detalle": str(error),
+                },
+            )
+        except Exception as error:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "El proveedor Ollama no está disponible.",
+                    "detalle": str(error),
+                },
+            )
 
         return {
             "mensaje_recibido": incidencia.mensaje,
@@ -58,9 +76,26 @@ def crear_incidencia(incidencia: IncidenciaEntrada):
     # -------- GROQ --------
     if incidencia.proveedor == Proveedor.GROQ:
 
-        resultado, metricas = groq_service.analizar(
-            incidencia.mensaje
-        )
+        try:
+            resultado, metricas = groq_service.analizar(
+                incidencia.mensaje
+            )
+        except ValidationError as error:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "La respuesta de Groq no cumple el esquema esperado.",
+                    "detalle": str(error),
+                },
+            )
+        except Exception as error:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "El proveedor Groq no está disponible.",
+                    "detalle": str(error),
+                },
+            )
 
         return {
             "mensaje_recibido": incidencia.mensaje,
@@ -73,13 +108,32 @@ def crear_incidencia(incidencia: IncidenciaEntrada):
     # -------- COMPARAR --------
     if incidencia.proveedor == Proveedor.COMPARAR:
 
-        resultado_ollama, metricas_ollama = llm_service.analizar(
-            incidencia.mensaje
-        )
+        try:
+            resultado_ollama, metricas_ollama = llm_service.analizar(
+                incidencia.mensaje
+            )
 
-        resultado_groq, metricas_groq = groq_service.analizar(
-            incidencia.mensaje
-        )
+            resultado_groq, metricas_groq = groq_service.analizar(
+                incidencia.mensaje
+            )
+
+        except ValidationError as error:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "Uno de los modelos no cumple el esquema esperado.",
+                    "detalle": str(error),
+                },
+            )
+
+        except Exception as error:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "Uno de los proveedores no está disponible.",
+                    "detalle": str(error),
+                },
+            )
 
         return {
             "mensaje_recibido": incidencia.mensaje,

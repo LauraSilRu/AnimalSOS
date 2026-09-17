@@ -3,3 +3,8 @@ uvicorn[standard]
 pydantic
 pytest
 httpx
+ollama
+groq
+python-dotenv
+streamlit
+requests
