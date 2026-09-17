@@ -3,7 +3,7 @@ import time
 
 import ollama
 
-from backend.schemas import ResultadoTriaje
+from backend.schemas import MetricasLLM, ResultadoTriaje
 
 
 PROMPT_SISTEMA = """
@@ -126,25 +126,23 @@ class OllamaService:
             tokens_salida = respuesta.get("eval_count", 0)
             tokens_totales = tokens_entrada + tokens_salida
 
-            coste_estimado = 0.0
-
-            print(
-                {
-                    "proveedor": "ollama",
-                    "modelo": "llama3.2",
-                    "tokens_entrada": tokens_entrada,
-                    "tokens_salida": tokens_salida,
-                    "tokens_totales": tokens_totales,
-                    "latencia_segundos": round(latencia, 3),
-                    "coste_estimado": coste_estimado,
-                }
+            metricas = MetricasLLM(
+                proveedor="ollama",
+                modelo="llama3.2",
+                tokens_entrada=tokens_entrada,
+                tokens_salida=tokens_salida,
+                tokens_totales=tokens_totales,
+                latencia_segundos=round(latencia, 3),
+                coste_estimado=0.0,
             )
 
             contenido = respuesta["message"]["content"]
             datos = json.loads(contenido)
 
             try:
-                return ResultadoTriaje(**datos)
+                resultado = ResultadoTriaje(**datos)
+
+                return resultado, metricas
 
             except Exception as error:
 

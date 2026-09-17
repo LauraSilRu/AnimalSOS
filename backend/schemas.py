@@ -28,12 +28,21 @@ class Departamento(str, Enum):
     VOLUNTARIADO = "voluntariado"
     ADMINISTRACION = "administracion"
 
+class Proveedor(str, Enum):
+    OLLAMA = "ollama"
+    GROQ = "groq"
+    COMPARAR = "comparar"
+
 
 class IncidenciaEntrada(BaseModel):
     mensaje: str = Field(
         ...,
         min_length=1,
         description="Descripción de la incidencia comunicada por el usuario",
+    )
+    proveedor: Proveedor = Field(
+        default=Proveedor.OLLAMA,
+        description="Proveedor LLM utilizado para analizar la incidencia",
     )
 
 
@@ -56,3 +65,12 @@ class ResultadoTriaje(BaseModel):
             )
 
         return value
+
+class MetricasLLM(BaseModel):
+    proveedor: str
+    modelo: str
+    tokens_entrada: int
+    tokens_salida: int
+    tokens_totales: int
+    latencia_segundos: float
+    coste_estimado: float
