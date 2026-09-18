@@ -7,3 +7,6 @@
 # Archivos Python generados
 __pycache__/
 *.pyc
+
+# Registro local de incidencias
+data/incidencias.json

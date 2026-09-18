@@ -1,9 +1,37 @@
 import requests
 import streamlit as st
+from pathlib import Path
+import json
+import sys
 
+
+# Añadimos la raíz del proyecto al path de Python
+RUTA_PROYECTO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RUTA_PROYECTO))
+
+from backend.incident_log import actualizar_decision_humana
 
 API_URL = "http://127.0.0.1:8000/incidencias"
 
+
+RUTA_REGISTRO = (
+    Path(__file__).resolve().parent.parent
+    / "data"
+    / "incidencias.json"
+)
+
+
+def cargar_registro():
+    """Carga las incidencias registradas."""
+
+    if not RUTA_REGISTRO.exists():
+        return []
+
+    try:
+        with open(RUTA_REGISTRO, "r", encoding="utf-8") as archivo:
+            return json.load(archivo)
+    except (json.JSONDecodeError, OSError):
+        return []
 
 st.set_page_config(
     page_title="AnimalSOS",
@@ -700,6 +728,10 @@ if "resultado" in st.session_state:
             f"Categoría detectada: **{resultado['categoria']}**"
         )
 
+        st.info(
+            f"Departamento asignado: **{resultado['departamento']}**"
+        )
+
 
     # ==================================================
     # UN SOLO PROVEEDOR
@@ -835,8 +867,19 @@ if "resultado" in st.session_state:
             key="validar_resultado",
         ):
 
+            decision_final = {
+                "categoria": categoria_editada,
+                "urgencia": urgencia_editada,
+                "departamento": departamento_editado,
+            }
+
+            actualizar_decision_humana(
+                incidencia_id=resultado.get("id"),
+                decision_final=decision_final,
+            )
+
             st.success(
-                "Resultado revisado y validado por una persona."
+                "Resultado revisado y guardado como decisión final."
             )
 
             tarjeta_decision_final(
@@ -1061,20 +1104,188 @@ if "resultado" in st.session_state:
             key="validar_comparacion",
         ):
 
+            decision_final = {
+                "categoria": categoria_final,
+                "urgencia": urgencia_final,
+                "departamento": departamento_final,
+            }
+
+            actualizar_decision_humana(
+                incidencia_id=resultado.get("id"),
+                decision_final=decision_final,
+            )
+
             st.success(
-                "Decisión revisada y validada por una persona."
+                "Decisión revisada y guardada como decisión final."
             )
 
-            st.markdown("### 📋 Decisión final")
-
-            st.write(
-                f"**Categoría:** {categoria_final}"
+            tarjeta_decision_final(
+                categoria_final,
+                urgencia_final,
+                departamento_final,
             )
 
-            st.write(
-                f"**Urgencia:** {urgencia_final}"
+# ==================================================
+# REGISTRO DE INCIDENCIAS
+# ==================================================
+
+st.divider()
+
+st.markdown("## 📋 Registro de incidencias")
+
+st.markdown(
+    """
+    <div class="section-card">
+        <div class="section-label">Historial</div>
+        <div class="help-text">
+            Consulta las incidencias analizadas y las decisiones registradas
+            por AnimalSOS.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+incidencias_registradas = cargar_registro()
+
+if not incidencias_registradas:
+
+    st.info("Todavía no hay incidencias registradas.")
+
+else:
+
+    # Mostramos primero las más recientes
+    incidencias_registradas = list(reversed(incidencias_registradas))
+
+    # Resumen
+    total = len(incidencias_registradas)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("📋 Incidencias registradas", total)
+
+    with col2:
+        humanas = sum(
+            1
+            for incidencia in incidencias_registradas
+            if incidencia.get("validacion_humana", False)
+        )
+
+        st.metric("👩‍💼 Revisadas por una persona", humanas)
+
+    st.markdown("### Historial")
+
+    for incidencia in incidencias_registradas:
+
+        proveedor = incidencia.get("proveedor", "desconocido")
+
+        if proveedor == "ninguno":
+            metodo = "⚙️ Sin LLM"
+        elif proveedor == "ollama":
+            metodo = "🖥️ Ollama"
+        elif proveedor == "groq":
+            metodo = "☁️ Groq"
+        elif proveedor == "comparar":
+            metodo = "⚖️ Comparación"
+        else:
+            metodo = proveedor
+
+        validacion_humana = incidencia.get(
+            "validacion_humana",
+            False,
+        )
+
+        if validacion_humana:
+            estado = "👩‍💼 Validada por persona"
+        elif proveedor == "ninguno":
+            estado = "⚙️ Decisión automática"
+        else:
+            estado = "🤖 Decisión de IA"
+
+        # Obtenemos el departamento de la decisión final
+        decision_final = incidencia.get("decision_final") or {}
+
+        departamento = decision_final.get(
+            "departamento",
+            "sin asignar",
+        )
+
+        nombres_departamentos = {
+            "rescate": "🛟 Rescate",
+            "acogida": "🏠 Acogida",
+            "adopciones": "🐾 Adopciones",
+            "voluntariado": "🤝 Voluntariado",
+            "administracion": "🏢 Administración",
+        }
+
+        departamento_mostrado = nombres_departamentos.get(
+            departamento,
+            departamento.replace("_", " ").title(),
+        )
+
+        with st.expander(
+            f"#{incidencia['id']} · "
+            f"{incidencia['fecha']} · "
+            f"{departamento_mostrado}"
+        ):
+
+            st.markdown(
+                f"**Incidencia:** {incidencia['mensaje']}"
             )
 
-            st.write(
-                f"**Departamento:** {departamento_final}"
-            )
+            st.markdown(f"**Método:** {metodo}")
+
+            st.markdown(f"**Estado:** {estado}")
+
+            resultado_ia = incidencia.get("resultado_ia")
+
+            if resultado_ia:
+
+                st.markdown("#### 🤖 Resultado de la IA")
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.write(
+                        f"**Categoría:** "
+                        f"{resultado_ia.get('categoria', '-')}"
+                    )
+
+                with col2:
+                    st.write(
+                        f"**Urgencia:** "
+                        f"{resultado_ia.get('urgencia', '-')}"
+                    )
+
+                with col3:
+                    st.write(
+                        f"**Departamento:** "
+                        f"{resultado_ia.get('departamento', '-')}"
+                    )
+
+            decision_final = incidencia.get("decision_final")
+
+            if decision_final:
+
+                st.markdown("#### 👤 Decisión final")
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.write(
+                        f"**Categoría:** "
+                        f"{decision_final.get('categoria', '-')}"
+                    )
+
+                with col2:
+                    st.write(
+                        f"**Urgencia:** "
+                        f"{decision_final.get('urgencia', '-')}"
+                    )
+
+                with col3:
+                    st.write(
+                        f"**Departamento:** "
+                        f"{decision_final.get('departamento', '-')}"
+                    )

@@ -4,7 +4,8 @@ from pydantic import ValidationError
 from backend.filter import analizar_filtro
 from backend.groq_service import GroqService
 from backend.llm_service import OllamaService
-from backend.schemas import IncidenciaEntrada, Proveedor
+from backend.schemas import IncidenciaEntrada, Proveedor, Departamento
+from backend.incident_log import guardar_incidencia
 
 
 app = FastAPI(
@@ -34,10 +35,36 @@ def crear_incidencia(incidencia: IncidenciaEntrada):
 
     # Si es un caso sencillo, no necesitamos utilizar ningún LLM.
     if decision.value == "sin_llm":
+
+        departamentos_sin_llm = {
+            "informacion": Departamento.ADMINISTRACION.value,
+            "donacion": Departamento.ADMINISTRACION.value,
+            "voluntariado": Departamento.VOLUNTARIADO.value,
+        }
+
+        departamento = departamentos_sin_llm.get(
+            categoria,
+            Departamento.ADMINISTRACION.value,
+        )
+
+        decision_final = {
+            "categoria": categoria,
+            "departamento": departamento,
+        }
+
+        guardar_incidencia(
+            mensaje=incidencia.mensaje,
+            proveedor="ninguno",
+            resultado_ia=None,
+            decision_final=decision_final,
+            validacion_humana=False,
+        )
+
         return {
             "mensaje_recibido": incidencia.mensaje,
             "decision_filtro": decision,
             "categoria": categoria,
+            "departamento": departamento,
             "proveedor": "ninguno",
         }
 
@@ -65,7 +92,16 @@ def crear_incidencia(incidencia: IncidenciaEntrada):
                 },
             )
 
+        registro = guardar_incidencia(
+            mensaje=incidencia.mensaje,
+            proveedor="ollama",
+            resultado_ia=resultado.model_dump(),
+            decision_final=resultado.model_dump(),
+            validacion_humana=False,
+        )
+
         return {
+            "id": registro["id"],
             "mensaje_recibido": incidencia.mensaje,
             "decision_filtro": decision,
             "proveedor": "ollama",
@@ -97,7 +133,16 @@ def crear_incidencia(incidencia: IncidenciaEntrada):
                 },
             )
 
+        registro = guardar_incidencia(
+            mensaje=incidencia.mensaje,
+            proveedor="groq",
+            resultado_ia=resultado.model_dump(),
+            decision_final=resultado.model_dump(),
+            validacion_humana=False,
+        )
+
         return {
+            "id": registro["id"],
             "mensaje_recibido": incidencia.mensaje,
             "decision_filtro": decision,
             "proveedor": "groq",
@@ -135,7 +180,19 @@ def crear_incidencia(incidencia: IncidenciaEntrada):
                 },
             )
 
+        registro = guardar_incidencia(
+            mensaje=incidencia.mensaje,
+            proveedor="comparar",
+            resultado_ia={
+                "ollama": resultado_ollama.model_dump(),
+                "groq": resultado_groq.model_dump(),
+            },
+            decision_final=None,
+            validacion_humana=False,
+        )
+
         return {
+            "id": registro["id"],
             "mensaje_recibido": incidencia.mensaje,
             "decision_filtro": decision,
             "proveedor": "comparar",
