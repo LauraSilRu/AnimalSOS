@@ -34,6 +34,25 @@ La justificación debe resumir de forma breve y comprensible los factores
 observables que han llevado a la decisión. No debes revelar una cadena de
 pensamiento interna extensa.
 
+EJEMPLO DE CLASIFICACIÓN (FEW-SHOT):
+
+Entrada:
+"Gato perdido desde hace dos días. Su familia no consigue localizarlo."
+
+Salida esperada:
+{
+  "categoria": "animal_perdido",
+  "urgencia": "media",
+  "departamento": "rescate",
+  "resumen": "Gato perdido desde hace dos días necesita ayuda para localizarlo",
+  "accion_recomendada": "Recopilar información y coordinar acciones para localizar al animal.",
+  "justificacion": "La incidencia describe un gato perdido que necesita ayuda para ser localizado."
+}
+
+Utiliza este ejemplo como referencia para relacionar los hechos de la incidencia
+con la categoría, urgencia y departamento correspondientes. No copies el ejemplo
+literalmente si la nueva incidencia describe una situación diferente.
+
 CATEGORÍAS DISPONIBLES:
 - animal_herido: animal con lesiones, enfermedad o posible necesidad veterinaria.
 - animal_perdido: animal perdido o encontrado sin su responsable.
